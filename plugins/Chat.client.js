@@ -1,12 +1,16 @@
-export default defineNuxtPlugin(nuxtApp => {
-  
+import { storeToRefs } from "pinia";
+
+export default defineNuxtPlugin(nuxtApp => {  
   console.log('init twitch chat nuxt plugin')
   class TwitchChat {
-    constructor(joiner, broadcaster, commands) {
+    constructor(joiner, broadcaster, commands, commandPrefix) {
       this.joiner = joiner;
       this.broadcaster = broadcaster;
       this.commands = commands;
+      this.commandPrefix = commandPrefix;
     }
+    // parseMessage, parseTags, parseCommand, parseSource and parseParameters came from twitch's documentation
+    // for an example message parser, with a couple small changes here and there
     parseMessage(message) {
       let parsedMessage = {  // Contains the component parts.
         tags: null,
@@ -262,13 +266,16 @@ export default defineNuxtPlugin(nuxtApp => {
 
       return command;
     }
+    // initialize the websocket to twitch's chat socket, authenticate using an access token, and connect
+    // to the desired channel. add handlers for new messages and connection status
     initSocket(pass) {
       this.twitchSocket.addEventListener('open', (event) => {
         this.twitchSocket.send(`PASS oauth:${pass}`)
         this.twitchSocket.send(`CAP REQ :twitch.tv/commands twitch.tv/tags`)
         this.twitchSocket.send(`NICK ${this.joiner}`)
         this.twitchSocket.send(`JOIN #${this.broadcaster}`)
-    
+
+        
         this.twitchSocket.addEventListener('message', (event) => {
           let parsedMessage = this.parseMessage(event.data)
           this.handleMessage(parsedMessage)
@@ -283,27 +290,103 @@ export default defineNuxtPlugin(nuxtApp => {
         })
       })
     }
+    // sends a PRIVMSG to the channel we're connected to
     sendChat(messageText) {
       this.twitchSocket.send(`PRIVMSG #${this.broadcaster} :${messageText}`)
     }
+    // general send to the websocket
     sendCommand(commandMsg) {
       this.twitchSocket.send(commandMsg)
     }
+    // handle a new message from the websocket
     handleMessage(message) {
-      if (!message) return;
+      if (!message) return; // skip if there's no message data
       console.log(message)
       switch (message.command.command) {
-        case 'PRIVMSG':
+        case 'PRIVMSG': // new message sent to chat
           console.log(`${message.tags['display-name']}: ${message.parameters}`)
+          if (message.parameters.startsWith(this.commandPrefix)) { // the message was a command message
+            // console.log('a command was sent')
+            this.handleCommand(message);
+          }
           ;
-        case 'PING':
+        case 'PING': // twitch websocket requires a pong response when they send a ping, to verify connection
           console.log(`ping received, sending pong`)
           this.sendCommand(`PONG ${message.parameters}`)
           ; 
-        case '001':
-          console.log(`welcome message sent, we're in boys`)
-          this.sendChat(`${this.joiner} has connected to the chat! Jebaited`)
+        case '001': // this was supposed to be the welcome message but it gets sent after every single message
+          // console.log(`welcome message sent, we're in boys`)
+          // this.sendChat(`${this.joiner} has connected to the chat! Jebaited`)
           ;
+      }
+    }
+    // handle a command message
+    handleCommand(message) {
+      let thisCommand = message.parameters.trim().split(' ');
+      let commandKey = thisCommand[0].substring(1).toLowerCase();
+      let args = thisCommand.slice(1)
+      
+      // find the matching command from the available commands
+      const foundCommand = this.commands.find(obj => obj.triggers.includes(commandKey));
+
+      if (foundCommand) {
+        let commandResponse = foundCommand.res
+        if (foundCommand.res.includes('#{')) { // response references arg in command (i.e. !so @username)
+          commandResponse = this.injectArguments(commandResponse, args, message)
+        }
+        if (foundCommand.res.includes('${')) { // contains injectable
+          commandResponse = this.injectInjectables(commandResponse, this.injectables)
+        }
+        // respond with the complete command response
+        this.sendChat(commandResponse)
+      } else {
+        // this.sendChat(`${commandKey} is not a valid command.`)
+        // console.log(`command ${commandKey} does not return a valid command.`)
+      }
+    }
+    injectArguments(template, values, originalMessage) {
+      return template.replace(/#{(\d+)}/g, (match, index) => {
+        // replace with corresponding argument, or if none were specified,
+          // replace with sender's username
+        let replacement = values[parseInt(match.replace('#{', '').replace('}', ''))] || originalMessage.tags['display-name']; // Use an empty string if index is out of bounds
+        if (replacement.includes('@')) { // making it easy and stripping the @ symbol for when usernames are mentioned
+          replacement = replacement.replace('@', '')
+        }
+        return replacement;
+      })
+    }
+    injectInjectables(template, values) { // thank you chatgpt
+      return template.replace(/\${(.*?)}/g, (match, p1) => {
+        const key = p1.trim();
+        const value = values[key];
+    
+        if (typeof value === 'function') {
+          // If the value is a function, execute it and return the result
+          return value();
+        } else {
+          // If the value is a string, return it as is
+          return value || match;
+        }
+      });
+    }
+    injectables = {
+      streamCategory: () => {
+        return nuxtApp.$Stream.streamCategory;
+      },
+      streamer: () => {
+        return nuxtApp.$Stream.streamBroadcaster;
+      },
+      streamTitle: () => {
+        console.log(nuxtApp.$Stream)
+        return nuxtApp.$Stream.streamTitle;
+      },
+      testInject: `(injected message)`,
+      allCommands: () => {
+        let response = "The available commands in this channel are: "
+        this.commands.forEach(command => {
+          response += `!${command.triggers[0]}, `
+        })
+        return response
       }
     }
     twitchSocket = new WebSocket('ws://irc-ws.chat.twitch.tv:80');
@@ -311,20 +394,41 @@ export default defineNuxtPlugin(nuxtApp => {
 
   let commands = [
     {
-      trigger: ['hello'],
-      res: "hey"
+      triggers: ['so', 'shoutout'],
+      res: 'Please show some love to @#{0}, you can follow them here! https://twitch.tv/#{0}'
     },
     {
-      trigger: ['sup'],
-      res: 'yo'
+      triggers: ['lurk'],
+      res: 'See ya later, @#{0}.'
+    },
+    {
+      triggers: ['title'],
+      res: 'The stream title is: ${streamTitle}'
+    },
+    {
+      triggers: ['jam'],
+      res: 'lebronJAM lebronJAM lebronJAM lebronJAM lebronJAM lebronJAM'
+    },
+    {
+      triggers: ['commands'],
+      res: '${allCommands}'
+    },
+    {
+      triggers: ['game', 'category'],
+      res: '@#{0}, ${streamer} is currently playing ${streamCategory}!'
     }
   ]
-  let Chat = new TwitchChat('tayne_bot', 'brybrybirdie');
-  Chat.initSocket('6883hte27g6txduku0ffhsu43gfpro', 'tayne_bot', 'brybrybirdie');
 
-  return {
-    provide: {
-      footy: 'bar'
+  const authStore = useAuthStore()
+  const { loggedIn, accessToken } = storeToRefs(authStore)
+  if (loggedIn.value) {
+    let Chat = new TwitchChat('tayne_bot', 'brybrybirdie', commands, '!');
+    Chat.initSocket(accessToken.value, 'tayne_bot', 'brybrybirdie');
+
+    return {
+      provide: {
+        Chat: Chat
+      }
     }
   }
 })
