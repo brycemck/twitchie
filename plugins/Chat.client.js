@@ -371,14 +371,20 @@ export default defineNuxtPlugin(nuxtApp => {
     }
     injectables = {
       streamCategory: () => {
-        return nuxtApp.$Stream.streamCategory;
+        const streamStore = useStreamStore()
+        streamStore.getStreamInfo()
+        const { game_name } = storeToRefs(streamStore)
+        return game_name.value;
       },
       streamer: () => {
-        return nuxtApp.$Stream.streamBroadcaster;
+        const { broadcaster_name } = storeToRefs(useStreamStore())
+        return broadcaster_name.value;
       },
       streamTitle: () => {
-        console.log(nuxtApp.$Stream)
-        return nuxtApp.$Stream.streamTitle;
+        const streamStore = useStreamStore()
+        streamStore.getStreamInfo()
+        const { stream_title } = storeToRefs(streamStore)
+        return stream_title.value;
       },
       testInject: `(injected message)`,
       allCommands: () => {
@@ -416,6 +422,10 @@ export default defineNuxtPlugin(nuxtApp => {
     {
       triggers: ['game', 'category'],
       res: '@#{0}, ${streamer} is currently playing ${streamCategory}!'
+    },
+    {
+      triggers: ['title'],
+      res: 'The stream title is: ${streamTitle}'
     }
   ]
 
