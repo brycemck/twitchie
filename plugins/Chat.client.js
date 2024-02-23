@@ -377,7 +377,9 @@ export default defineNuxtPlugin(nuxtApp => {
         return game_name.value;
       },
       streamer: () => {
-        const { broadcaster_name } = storeToRefs(useStreamStore())
+        const streamStore = useStreamStore()
+        streamStore.getStreamInfo()
+        const { broadcaster_name } = storeToRefs(streamStore)
         return broadcaster_name.value;
       },
       streamTitle: () => {
