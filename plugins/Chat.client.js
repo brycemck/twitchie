@@ -1,4 +1,6 @@
 import { storeToRefs } from "pinia";
+import { useStreamApi } from "../composables/useStreamApi";
+import { useStreamStore } from "../stores/stream";
 
 export default defineNuxtPlugin(nuxtApp => {  
   console.log('init twitch chat nuxt plugin')
@@ -289,6 +291,10 @@ export default defineNuxtPlugin(nuxtApp => {
           console.log(event)
         })
       })
+      this.streamApi.UserInfo(this.broadcaster).then((data) => {
+        this.broadcasterId = data.data._rawValue.data[0].id
+        this.streamStore.broadcaster_id = this.broadcasterId
+      })
     }
     // sends a PRIVMSG to the channel we're connected to
     sendChat(messageText) {
@@ -371,21 +377,18 @@ export default defineNuxtPlugin(nuxtApp => {
     }
     injectables = {
       streamCategory: () => {
-        const streamStore = useStreamStore()
-        streamStore.getStreamInfo()
-        const { game_name } = storeToRefs(streamStore)
+        this.streamStore.getStreamInfo(this.streamStore.broadcaster_id)
+        const { game_name } = storeToRefs(this.streamStore)
         return game_name.value;
       },
       streamer: () => {
-        const streamStore = useStreamStore()
-        streamStore.getStreamInfo()
-        const { broadcaster_name } = storeToRefs(streamStore)
+        const { broadcaster_name } = storeToRefs(this.streamStore)
         return broadcaster_name.value;
       },
       streamTitle: () => {
-        const streamStore = useStreamStore()
-        streamStore.getStreamInfo()
-        const { stream_title } = storeToRefs(streamStore)
+        this.streamStore.getStreamInfo(this.streamStore.broadcaster_id)
+        const { stream_title } = storeToRefs(this.streamStore)
+        setTimeout(100)
         return stream_title.value;
       },
       testInject: `(injected message)`,
@@ -397,7 +400,9 @@ export default defineNuxtPlugin(nuxtApp => {
         return response
       }
     }
-    twitchSocket = new WebSocket('ws://irc-ws.chat.twitch.tv:80');
+    twitchSocket = new WebSocket('ws://irc-ws.chat.twitch.tv:80')
+    streamApi = useStreamApi()
+    streamStore = useStreamStore()
   }
 
   let commands = [

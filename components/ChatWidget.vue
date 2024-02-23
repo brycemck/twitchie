@@ -14,7 +14,6 @@ export default {
   },
   mounted() {
     const nuxtApp = useNuxtApp()
-    console.log(nuxtApp.$footy)
   }
 }
 </script>

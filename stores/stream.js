@@ -7,9 +7,9 @@ export const useStreamStore = defineStore('streamStore', {
     stream_title: ''
   }),
   actions: {
-    async getStreamInfo() {
+    async getStreamInfo(broadcasterId) {
       const streamApi = useStreamApi()
-      const { data: info } = await streamApi.ChannelInfo()
+      const { data: info } = await streamApi.ChannelInfo(broadcasterId)
       const thisData = info._rawValue.data[0]
 
       this.broadcaster_id = thisData.broadcaster_id
@@ -17,6 +17,9 @@ export const useStreamStore = defineStore('streamStore', {
       this.game_name = thisData.game_name
       this.tags = thisData.tags
       this.stream_title = thisData.title
+
+      return
     }
-  }
+  },
+  persist: true
 })
