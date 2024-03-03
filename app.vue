@@ -1,5 +1,12 @@
+<script setup>
+import MenuDrawer from '../components/MenuDrawer.vue'
+</script>
 <template>
-  <div>
-    <NuxtPage />
-  </div>
+  <v-layout class="rounded rounded-md">
+    <MenuDrawer></MenuDrawer>
+    <v-app-bar title="Application bar"></v-app-bar>
+    <v-main class="d-flex" style="min-height: 300px;">
+      <NuxtPage />
+    </v-main>
+  </v-layout>
 </template>

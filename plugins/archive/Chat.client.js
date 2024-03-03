@@ -294,6 +294,7 @@ export default defineNuxtPlugin(nuxtApp => {
       this.streamApi.UserInfo(this.broadcaster).then((data) => {
         this.broadcasterId = data.data._rawValue.data[0].id
         this.streamStore.broadcaster_id = this.broadcasterId
+        this.streamStore.profile_image_url = data.data._rawValue.data[0].profile_image_url
       })
     }
     // sends a PRIVMSG to the channel we're connected to
@@ -314,6 +315,8 @@ export default defineNuxtPlugin(nuxtApp => {
           if (message.parameters.startsWith(this.commandPrefix)) { // the message was a command message
             // console.log('a command was sent')
             this.handleCommand(message);
+          } else {
+            this.handleChatMessage(message);
           }
           ;
         case 'PING': // twitch websocket requires a pong response when they send a ping, to verify connection
@@ -349,6 +352,20 @@ export default defineNuxtPlugin(nuxtApp => {
         // this.sendChat(`${commandKey} is not a valid command.`)
         // console.log(`command ${commandKey} does not return a valid command.`)
       }
+    }
+    // handle a non-command chat message
+    handleChatMessage(message) {
+      console.log('PUSHING REAL CHAT MESSAGE')
+      console.log(message)
+      const thisMessage = {
+        display_name: message.tags['display-name'],
+        badges: message.tags.badges,
+        display_color: message.tags['color'],
+        message: message.parameters.trim()
+      }
+      this.displayedChatMessages.push(thisMessage)
+      console.log('chat message object:')
+      console.log(thisMessage)
     }
     injectArguments(template, values, originalMessage) {
       return template.replace(/#{(\d+)}/g, (match, index) => {
@@ -403,6 +420,7 @@ export default defineNuxtPlugin(nuxtApp => {
     twitchSocket = new WebSocket('ws://irc-ws.chat.twitch.tv:80')
     streamApi = useStreamApi()
     streamStore = useStreamStore()
+    displayedChatMessages = []
   }
 
   let commands = [

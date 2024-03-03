@@ -1,5 +1,6 @@
 <script setup>
-import ChatWidget from '../components/ChatWidget.vue'
+import MenuDrawer from '../components/MenuDrawer.vue'
+import Dashboard from '../components/Dashboard.vue'
 
 const streamStore = useStreamStore()
 streamStore.getStreamInfo(streamStore.broadcaster_id)
@@ -12,12 +13,12 @@ definePageMeta({
 </script>
 
 <template>
-  <ChatWidget />
-  <div>
-    <h2>stream info</h2>
-    <p>stream title: {{ streamStore.stream_title }}</p>
-    <p>stream broadcaster name: {{ streamStore.broadcaster_name }}</p>
-    <p>stream category: {{ streamStore.game_name }}</p>
-    <p>stream tags: {{ streamStore.tags }}</p>
-  </div>
+  <Dashboard></Dashboard>
 </template>
+
+<style>
+a {
+  color: white;
+  text-decoration: none;
+}
+</style>
