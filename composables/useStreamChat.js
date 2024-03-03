@@ -414,7 +414,6 @@ export const useStreamChat = (useSocket) => {
         setTimeout(100)
         return stream_title.value;
       },
-      testInject: `(injected message)`,
       allCommands: () => {
         let response = "The available commands in this channel are: "
         this.commands.value.forEach(command => {
@@ -463,7 +462,6 @@ export const useStreamChat = (useSocket) => {
   const { bot, broadcaster } = storeToRefs(authStore)
   if (broadcaster.value.accessToken) {
     let Chat = new TwitchChat(bot.value.name, broadcaster.value.name, broadcaster.value.accessToken, commands, '!');
-    console.log(Chat)
     if (useSocket) Chat.initSocket(broadcaster.value.accessToken);
     return Chat
   }

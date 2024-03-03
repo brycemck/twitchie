@@ -4,9 +4,11 @@ import MenuDrawer from '../components/MenuDrawer.vue'
 <template>
   <v-layout class="rounded rounded-md">
     <MenuDrawer></MenuDrawer>
-    <v-app-bar title="Application bar"></v-app-bar>
+    <v-app-bar title="celery"></v-app-bar>
     <v-main class="d-flex" style="min-height: 300px;">
-      <NuxtPage />
+      <v-container>
+        <NuxtPage />
+      </v-container>
     </v-main>
   </v-layout>
 </template>

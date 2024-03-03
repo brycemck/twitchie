@@ -14,19 +14,21 @@ onUnmounted(() => {
 })
 </script>
 <template>
-  <v-layout>
-    <v-card title="Stream chat">
-      <div class="chatbox">
-        <v-card-text>
-          <div v-for="message in chatMessages" :key="message.id">
-            <p>
-              <strong :style="{color: message.display_color}">{{ message.display_name }}</strong>
-              &nbsp;
-              <span>{{ message.message }}</span>
-            </p>
-          </div>
-        </v-card-text>
-      </div>
-    </v-card>
-  </v-layout>
+  <v-row>
+    <v-col>
+      <v-card title="Stream chat">
+        <div class="chatbox">
+          <v-card-text>
+            <div v-for="message in chatMessages" :key="message.id">
+              <p>
+                <strong :style="{color: message.display_color}">{{ message.display_name }}</strong>
+                &nbsp;
+                <span>{{ message.message }}</span>
+              </p>
+            </div>
+          </v-card-text>
+        </div>
+      </v-card>
+    </v-col>
+  </v-row>
 </template>

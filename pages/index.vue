@@ -15,10 +15,3 @@ definePageMeta({
 <template>
   <Dashboard></Dashboard>
 </template>
-
-<style>
-a {
-  color: white;
-  text-decoration: none;
-}
-</style>
