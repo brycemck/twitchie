@@ -5,9 +5,10 @@ import { ref } from "vue";
 
 export const useStreamChat = (useSocket) => {
   class TwitchChat {
-    constructor(joiner, broadcaster, commands, commandPrefix) {
+    constructor(joiner, broadcaster, broadcasterAccessToken, commands, commandPrefix) {
       this.joiner = joiner;
       this.broadcaster = broadcaster;
+      this.broadcasterAccessToken = broadcasterAccessToken;
       this.commands = ref(commands);
       this.commandPrefix = commandPrefix;
     }
@@ -291,11 +292,15 @@ export const useStreamChat = (useSocket) => {
           console.log(event)
         })
       })
-      this.streamApi.UserInfo(this.broadcaster).then((data) => {
-        this.broadcasterId = data.data._rawValue.data[0].id
+      this.streamApi.UserInfo(this.broadcasterAccessToken, this.broadcaster).then((data) => {
+        this.broadcasterId = data.data[0].id
         this.streamStore.broadcaster_id = this.broadcasterId
-        this.streamStore.profile_image_url = data.data._rawValue.data[0].profile_image_url
+        this.streamStore.profile_image_url = data.data[0].profile_image_url
       })
+    }
+    // disconnect from the socket (i.e. when user navigates away from chat page)
+    killSocket() {
+      this.twitchSocket.close()
     }
     // sends a PRIVMSG to the channel we're connected to
     sendChat(messageText) {
@@ -455,10 +460,11 @@ export const useStreamChat = (useSocket) => {
   ]
   
   const authStore = useAuthStore()
-  const { loggedIn, accessToken } = storeToRefs(authStore)
-  if (loggedIn.value) {
-    let Chat = new TwitchChat('tayne_bot', 'brybrybirdie', commands, '!');
-    if (useSocket) Chat.initSocket(accessToken.value, 'tayne_bot', 'brybrybirdie');
+  const { bot, broadcaster } = storeToRefs(authStore)
+  if (broadcaster.value.accessToken) {
+    let Chat = new TwitchChat(bot.value.name, broadcaster.value.name, broadcaster.value.accessToken, commands, '!');
+    console.log(Chat)
+    if (useSocket) Chat.initSocket(broadcaster.value.accessToken);
     return Chat
   }
 }

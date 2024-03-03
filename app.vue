@@ -10,3 +10,10 @@ import MenuDrawer from '../components/MenuDrawer.vue'
     </v-main>
   </v-layout>
 </template>
+
+<style>
+a {
+  color: white;
+  text-decoration: none;
+}
+</style>

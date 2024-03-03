@@ -1,6 +1,7 @@
 <script setup>
   const streamStore = useStreamStore()
   const { broadcaster_id, stream_title, game_name, tags, broadcaster_name } = storeToRefs(streamStore)
+  streamStore.getStreamInfo(broadcaster_id)
 </script>
 <template>
   <v-card title="Current Channel Information">

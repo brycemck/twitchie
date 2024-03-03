@@ -8,6 +8,7 @@ export const useStreamStore = defineStore('streamStore', {
   }),
   actions: {
     async getStreamInfo(broadcasterId) {
+      console.log('updating stream info')
       const streamApi = useStreamApi()
       const { data: info } = await streamApi.ChannelInfo(broadcasterId)
       const thisData = info._rawValue.data[0]

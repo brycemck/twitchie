@@ -6,9 +6,9 @@ const streamStore = useStreamStore()
 streamStore.getStreamInfo(streamStore.broadcaster_id)
 
 definePageMeta({
-  middleware: [
-    'auth'  
-  ]
+  // middleware: [
+  //   'auth'  
+  // ]
 })
 </script>
 

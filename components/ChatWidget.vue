@@ -1,11 +1,16 @@
 <script setup>
+import { onUnmounted } from "vue";
 import { useStreamChat } from "../composables/useStreamChat";
 const chatMessages = ref([])
+let streamChat;
 onMounted(() => {
-  const streamChat = useStreamChat(true)
+  streamChat = useStreamChat(true)
   chatMessages.value = streamChat.displayedChatMessages.value
   
   // const chatMessages = streamChat.value.displayedChatMessages
+})
+onUnmounted(() => {
+  streamChat.killSocket()
 })
 </script>
 <template>
