@@ -11,10 +11,11 @@ const streamChat = useStreamChat();
 if (!nuxtApp.$Chat) {
   nuxtApp.provide('Chat', streamChat)
 }
-// console.log(nuxtApp.$Chat)
 
 onMounted(() => {
-  streamChat.initSocket(bot.value.accessToken)
+  if (bot.value.accessToken !== '') {
+    streamChat.initSocket(bot.value.accessToken)
+  }
 })
 </script>
 <template>
