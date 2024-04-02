@@ -1,5 +1,21 @@
 <script setup>
+import { useNuxtApp } from 'nuxt/app';
+import { useStreamChat } from '../composables/useStreamChat.js'
 import MenuDrawer from '../components/MenuDrawer.vue'
+import { onMounted } from 'vue';
+const authStore = useAuthStore()
+const { bot, broadcaster } = storeToRefs(authStore)
+
+const nuxtApp = useNuxtApp()
+const streamChat = useStreamChat();
+if (!nuxtApp.$Chat) {
+  nuxtApp.provide('Chat', streamChat)
+}
+// console.log(nuxtApp.$Chat)
+
+onMounted(() => {
+  streamChat.initSocket(bot.value.accessToken)
+})
 </script>
 <template>
   <v-layout class="rounded rounded-md">

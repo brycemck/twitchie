@@ -2,15 +2,17 @@ import { storeToRefs } from "pinia";
 import { useStreamApi } from "../composables/useStreamApi";
 import { useStreamStore } from "../stores/stream";
 import { ref } from "vue";
+import { usePreferencesStore } from "../stores/preferences";
+
 
 export const useStreamChat = (useSocket) => {
   class TwitchChat {
-    constructor(joiner, broadcaster, broadcasterAccessToken, commands, commandPrefix) {
+    constructor(joiner, broadcaster, broadcasterAccessToken, defaultCommands, customCommands) {
       this.joiner = joiner;
       this.broadcaster = broadcaster;
       this.broadcasterAccessToken = broadcasterAccessToken;
-      this.commands = ref(commands);
-      this.commandPrefix = commandPrefix;
+      this.defaultCommands = defaultCommands;
+      this.customCommands = customCommands;
     }
     // parseMessage, parseTags, parseCommand, parseSource and parseParameters came from twitch's documentation
     // for an example message parser, with a couple small changes here and there
@@ -272,6 +274,7 @@ export const useStreamChat = (useSocket) => {
     // initialize the websocket to twitch's chat socket, authenticate using an access token, and connect
     // to the desired channel. add handlers for new messages and connection status
     initSocket(pass) {
+      this.twitchSocket = new WebSocket('ws://irc-ws.chat.twitch.tv:80')
       this.twitchSocket.addEventListener('open', (event) => {
         this.twitchSocket.send(`PASS oauth:${pass}`)
         this.twitchSocket.send(`CAP REQ :twitch.tv/commands twitch.tv/tags`)
@@ -304,6 +307,7 @@ export const useStreamChat = (useSocket) => {
     }
     // sends a PRIVMSG to the channel we're connected to
     sendChat(messageText) {
+      // console.log(`SENDING ${messageText}`)
       this.twitchSocket.send(`PRIVMSG #${this.broadcaster} :${messageText}`)
     }
     // general send to the websocket
@@ -313,19 +317,21 @@ export const useStreamChat = (useSocket) => {
     // handle a new message from the websocket
     handleMessage(message) {
       if (!message) return; // skip if there's no message data
-      console.log(message)
+      let preferencesStore = usePreferencesStore()
+      preferencesStore.setPreferences()
+      let { commandPrefix, highlightResponses } = storeToRefs(preferencesStore)
       switch (message.command.command) {
         case 'PRIVMSG': // new message sent to chat
-          console.log(`${message.tags['display-name']}: ${message.parameters}`)
-          if (message.parameters.startsWith(this.commandPrefix)) { // the message was a command message
+          // console.log(`${message.tags['display-name']}: ${message.parameters}`)
+          if (message.parameters.startsWith(commandPrefix.value)) { // the message was a command message
             // console.log('a command was sent')
-            this.handleCommand(message);
+            this.handleCommand(message, highlightResponses);
           } else {
             this.handleChatMessage(message);
           }
           ;
         case 'PING': // twitch websocket requires a pong response when they send a ping, to verify connection
-          console.log(`ping received, sending pong`)
+          // console.log(`ping received, sending pong`)
           this.sendCommand(`PONG ${message.parameters}`)
           ; 
         case '001': // this was supposed to be the welcome message but it gets sent after every single message
@@ -335,13 +341,14 @@ export const useStreamChat = (useSocket) => {
       }
     }
     // handle a command message
-    handleCommand(message) {
+    handleCommand(message, highlightResponses) {
       let thisCommand = message.parameters.trim().split(' ');
       let commandKey = thisCommand[0].substring(1).toLowerCase();
       let args = thisCommand.slice(1)
+      let allCommands = [...this.defaultCommands.value, ...this.customCommands.value]
       
       // find the matching command from the available commands
-      const foundCommand = this.commands.value.find(obj => obj.triggers.includes(commandKey));
+      const foundCommand = allCommands.find(obj => obj.triggers.includes(commandKey));
 
       if (foundCommand) {
         let commandResponse = foundCommand.res
@@ -349,10 +356,14 @@ export const useStreamChat = (useSocket) => {
           commandResponse = this.injectArguments(commandResponse, args, message)
         }
         if (foundCommand.res.includes('${')) { // contains injectable
-          commandResponse = this.injectInjectables(commandResponse, this.injectables)
+          commandResponse = this.injectInjectables(commandResponse, this.injectables, args)
         }
         // respond with the complete command response
-        this.sendChat(commandResponse)
+        if (highlightResponses.value == true) {
+          this.sendChat(`/me ${commandResponse}`)
+        } else {
+          this.sendChat(commandResponse)
+        }
       } else {
         // this.sendChat(`${commandKey} is not a valid command.`)
         // console.log(`command ${commandKey} does not return a valid command.`)
@@ -361,7 +372,6 @@ export const useStreamChat = (useSocket) => {
     // handle a non-command chat message
     handleChatMessage(message) {
       // console.log('PUSHING REAL CHAT MESSAGE')
-      console.log(message)
       const thisMessage = {
         display_name: message.tags['display-name'],
         badges: message.tags.badges,
@@ -384,14 +394,15 @@ export const useStreamChat = (useSocket) => {
         return replacement;
       })
     }
-    injectInjectables(template, values) { // thank you chatgpt
+    injectInjectables(template, values, commandArgs) { // thank you chatgpt
       return template.replace(/\${(.*?)}/g, (match, p1) => {
         const key = p1.trim();
-        const value = values[key];
-    
+        const args = key.substring(key.indexOf('(') + 1, key.lastIndexOf(')'))
+        const value = values[key.replace('(', '').replace(')', '').replace(args, '')];
+        
         if (typeof value === 'function') {
           // If the value is a function, execute it and return the result
-          return value();
+          return value(commandArgs, JSON.parse('[' + args + ']'));
         } else {
           // If the value is a string, return it as is
           return value || match;
@@ -415,19 +426,28 @@ export const useStreamChat = (useSocket) => {
         return stream_title.value;
       },
       allCommands: () => {
-        let response = "The available commands in this channel are: "
-        this.commands.value.forEach(command => {
+        let response = ""
+        let allCommands = [...this.defaultCommands._rawValue, ...this.customCommands._rawValue]
+        allCommands.forEach(command => {
           response += `!${command.triggers[0]}, `
+        })
+        return response
+      },
+      all: (commandArgs, args) => {
+        let response = ``
+        let template = args[0]
+        commandArgs.forEach(argument => {
+          let cleanedCommandArg = argument.replaceAll('@', '')
+          response += template.replaceAll('%', `${cleanedCommandArg} `)
         })
         return response
       }
     }
-    twitchSocket = new WebSocket('ws://irc-ws.chat.twitch.tv:80')
     streamApi = useStreamApi()
     streamStore = useStreamStore()
     displayedChatMessages = ref([])
   }
-  let commands = [
+  let defaultCommands = ref([
     {
       triggers: ['so', 'shoutout'],
       res: 'Please show some love to @#{0}, you can follow them here! https://twitch.tv/#{0}'
@@ -438,31 +458,42 @@ export const useStreamChat = (useSocket) => {
     },
     {
       triggers: ['title'],
-      res: 'The stream title is: ${streamTitle}'
-    },
-    {
-      triggers: ['jam'],
-      res: 'lebronJAM lebronJAM lebronJAM lebronJAM lebronJAM lebronJAM'
+      res: '@#{0}, the stream title is: ${streamTitle}'
     },
     {
       triggers: ['commands'],
-      res: '${allCommands}'
+      res: '@#{0}, the available commands in this channel are: ${allCommands}'
     },
     {
       triggers: ['game', 'category'],
       res: '@#{0}, ${streamer} is currently playing ${streamCategory}!'
     },
     {
-      triggers: ['title'],
-      res: 'The stream title is: ${streamTitle}'
+      triggers: ['mso'],
+      res: 'All of these homies deserve your love, go follow them! ${all("@%: https://twitch.tv/% ||")}'
     }
-  ]
+  ])
+  let customCommands = ref([
+    {
+      triggers: ['jam'],
+      res: 'lebronJAM lebronJAM lebronJAM lebronJAM lebronJAM lebronJAM'
+    },
+    {
+      triggers: ['testing'],
+      res: '${all("%")}'
+    },
+    {
+      triggers: ['poop'],
+      res: 'hmmm yes. dkjgfdfkjgdfkjg poopy!'
+    }
+  ])
   
   const authStore = useAuthStore()
   const { bot, broadcaster } = storeToRefs(authStore)
+
   if (broadcaster.value.accessToken) {
-    let Chat = new TwitchChat(bot.value.name, broadcaster.value.name, broadcaster.value.accessToken, commands, '!');
-    if (useSocket) Chat.initSocket(broadcaster.value.accessToken);
+    let Chat = new TwitchChat(bot.value.name, broadcaster.value.name, broadcaster.value.accessToken, defaultCommands, customCommands);
+    // if (useSocket) Chat.initSocket(bot.value.accessToken);
     return Chat
   }
 }
