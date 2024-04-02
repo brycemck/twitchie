@@ -2,10 +2,8 @@ import { storeToRefs } from "pinia";
 import { useStreamApi } from "../composables/useStreamApi";
 import { useStreamStore } from "../stores/stream";
 import { ref } from "vue";
-import { usePreferencesStore } from "../stores/preferences";
 
-
-export const useStreamChat = (useSocket) => {
+export const useStreamChat = () => {
   class TwitchChat {
     constructor(joiner, broadcaster, broadcasterAccessToken, defaultCommands, customCommands) {
       this.joiner = joiner;
@@ -317,15 +315,12 @@ export const useStreamChat = (useSocket) => {
     // handle a new message from the websocket
     handleMessage(message) {
       if (!message) return; // skip if there's no message data
-      let preferencesStore = usePreferencesStore()
-      preferencesStore.setPreferences()
-      let { commandPrefix, highlightResponses } = storeToRefs(preferencesStore)
       switch (message.command.command) {
         case 'PRIVMSG': // new message sent to chat
           // console.log(`${message.tags['display-name']}: ${message.parameters}`)
-          if (message.parameters.startsWith(commandPrefix.value)) { // the message was a command message
+          if (message.parameters.startsWith('!')) { // the message was a command message
             // console.log('a command was sent')
-            this.handleCommand(message, highlightResponses);
+            this.handleCommand(message, true);
           } else {
             this.handleChatMessage(message);
           }
@@ -359,7 +354,7 @@ export const useStreamChat = (useSocket) => {
           commandResponse = this.injectInjectables(commandResponse, this.injectables, args)
         }
         // respond with the complete command response
-        if (highlightResponses.value == true) {
+        if (highlightResponses == true) {
           this.sendChat(`/me ${commandResponse}`)
         } else {
           this.sendChat(commandResponse)
@@ -438,7 +433,7 @@ export const useStreamChat = (useSocket) => {
         let template = args[0]
         commandArgs.forEach(argument => {
           let cleanedCommandArg = argument.replaceAll('@', '')
-          response += template.replaceAll('%', `${cleanedCommandArg} `)
+          response += template.replaceAll('%', `${cleanedCommandArg}`)
         })
         return response
       }
@@ -470,7 +465,7 @@ export const useStreamChat = (useSocket) => {
     },
     {
       triggers: ['mso'],
-      res: 'All of these homies deserve your love, go follow them! ${all("@%: https://twitch.tv/% ||")}'
+      res: 'All of these homies deserve your love, go follow them! ${all("@%: https://twitch.tv/% || ")}'
     }
   ])
   let customCommands = ref([

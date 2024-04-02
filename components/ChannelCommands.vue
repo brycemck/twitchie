@@ -1,36 +1,22 @@
 <script setup>
-import { usePreferencesStore } from "../stores/preferences";
-import userPreferencesFile from "../data/preferences.json"
 import { useNuxtApp } from "nuxt/app";
 
 const chatDefaultCommands = ref([])
 const chatInjectables = ref([])
 const chatCustomCommands = ref([])
 
-const preferencesStore = usePreferencesStore()
-let { commandPrefix } = storeToRefs(preferencesStore)
-
-let preferencesObject = userPreferencesFile;
-// console.log(preferencesObject)
-
 const nuxtApp = useNuxtApp()
 chatDefaultCommands.value = nuxtApp.$Chat.defaultCommands.value
 chatCustomCommands.value = nuxtApp.$Chat.customCommands.value
-chatInjectables.value = nuxtApp.$Chat.injectables.value
+chatInjectables.value = nuxtApp.$Chat.injectables
 
 onMounted(() => {
   // const chatMessages = streamChat.value.displayedChatMessages
 })
 
-const updatePreferencesFile = () => {
-  
-}
-const commandPrefixUpdate = (e) => {
-  preferencesStore.setPreference('commandPrefix', e)
-}
 </script>
 <template>
-  <v-row>
+  <!-- <v-row>
     <v-col>
       <v-card variant="elevated" title="Preferences">
         <v-card-text>
@@ -48,7 +34,8 @@ const commandPrefixUpdate = (e) => {
           If there are no specified parameters, #{0} will always be the username of the sender.
         </v-card-text>
       </v-card>
-    </v-col>
+    </v-col> -->
+  <v-row>
     <v-col>
       <v-card variant="elevated" title="Injectables">
         <v-card-text>
