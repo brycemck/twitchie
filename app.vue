@@ -3,7 +3,9 @@ import { useNuxtApp } from 'nuxt/app';
 import { useStreamChat } from '../composables/useStreamChat.js'
 import MenuDrawer from '../components/MenuDrawer.vue'
 import { onMounted } from 'vue';
+import { usePreferencesStore } from './stores/preferences.js';
 const authStore = useAuthStore()
+const preferencesStore = usePreferencesStore()
 const { bot, broadcaster } = storeToRefs(authStore)
 
 const nuxtApp = useNuxtApp()
@@ -11,11 +13,15 @@ const streamChat = useStreamChat();
 if (!nuxtApp.$Chat) {
   nuxtApp.provide('Chat', streamChat)
 }
+if (!nuxtApp.$Preferences) {
+  nuxtApp.provide('Preferences', preferencesStore)
+}
 
 onMounted(() => {
   if (bot.value.accessToken !== '') {
     streamChat.initSocket(bot.value.accessToken)
   }
+  preferencesStore.loadPreferencesFromDb()
 })
 </script>
 <template>

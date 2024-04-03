@@ -1,23 +1,33 @@
 <script setup>
 import { useNuxtApp } from "nuxt/app";
 import { usePreferencesStore } from "../stores/preferences";
+const preferencesStore = usePreferencesStore()
 
 const chatDefaultCommands = ref([])
 const chatInjectables = ref([])
 const chatCustomCommands = ref([])
+const preferences = storeToRefs(preferencesStore)
 
 const nuxtApp = useNuxtApp()
 chatDefaultCommands.value = nuxtApp.$Chat.defaultCommands.value
 chatCustomCommands.value = nuxtApp.$Chat.customCommands.value
 chatInjectables.value = nuxtApp.$Chat.injectables
 
-const preferencesStore = usePreferencesStore();
-preferencesStore.loadPreferencesFromDb();
-const { commandPrefix, highlightResponses } = storeToRefs(preferencesStore)
-
 onMounted(() => {
+  preferencesStore.loadPreferencesFromDb()
   // const chatMessages = streamChat.value.displayedChatMessages
 })
+
+const preferenceUpdated = (e) => {
+  const preferenceName = e.srcElement.getAttribute('name')
+  let preferenceValue;
+  if (e.srcElement.type == 'checkbox') {
+    preferenceValue = e.srcElement.checked;
+  } else {
+    preferenceValue = e.srcElement.value
+  }
+  preferencesStore.updatePreference(preferenceName, preferenceValue)
+}
 
 </script>
 <template>
@@ -25,8 +35,12 @@ onMounted(() => {
     <v-col>
       <v-card variant="elevated" title="Preferences">
         <v-card-text>
-          <v-text-field label="Command Prefix" :model-value="commandPrefix"></v-text-field>
-          <v-checkbox label="Highlight Responses" :model-value="highlightResponses"></v-checkbox>
+          <!-- <v-text-field label="Command Prefix" :model-value="commandPrefix" @change="(event) => {preferenceUpdated(event)}"></v-text-field>
+          <v-checkbox label="Highlight Responses" :model-value="highlightResponses"></v-checkbox> -->
+          <div v-for="(value, key, i) in preferences">
+            <v-text-field v-if="typeof(value.value.value) == 'string'" :label="value.value.label" :model-value="value.value.value" :name="key" @change="preferenceUpdated"></v-text-field>
+            <v-checkbox v-if="typeof(value.value.value) == 'boolean'" :label="value.value.label" :model-value="value.value.value" :name="key" @change="preferenceUpdated"></v-checkbox>
+          </div>
         </v-card-text>
       </v-card>
     </v-col>
