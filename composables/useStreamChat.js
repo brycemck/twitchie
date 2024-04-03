@@ -2,6 +2,7 @@ import { storeToRefs } from "pinia";
 import { useStreamApi } from "../composables/useStreamApi";
 import { useStreamStore } from "../stores/stream";
 import { usePreferencesStore } from "../stores/preferences";
+import { useCommandsStore } from "../stores/commands";
 import { ref } from "vue";
 
 export const useStreamChat = () => {
@@ -10,8 +11,9 @@ export const useStreamChat = () => {
       this.joiner = joiner;
       this.broadcaster = broadcaster;
       this.broadcasterAccessToken = broadcasterAccessToken;
-      this.defaultCommands = defaultCommands;
-      this.customCommands = customCommands;
+      this.commandsStore = useCommandsStore();
+      // this.defaultCommands = defaultCommands;
+      // this.customCommands = customCommands;
       this.preferencesStore = usePreferencesStore();
       this.preferences = {};
     }
@@ -282,6 +284,7 @@ export const useStreamChat = () => {
         this.twitchSocket.send(`NICK ${this.joiner}`)
         this.twitchSocket.send(`JOIN #${this.broadcaster}`)
         this.initPreferences()
+        this.initCommands()
         
         this.twitchSocket.addEventListener('message', (event) => {
           let parsedMessage = this.parseMessage(event.data)
@@ -307,6 +310,14 @@ export const useStreamChat = () => {
       const { commandPrefix, highlightResponses } = storeToRefs(this.preferencesStore)
       this.preferences.commandPrefix = commandPrefix;
       this.preferences.highlightResponses = highlightResponses;
+    }
+    // load commands store
+    async initCommands() {
+      const { defaultCommands, customCommands } = storeToRefs(this.commandsStore)
+      await this.commandsStore.loadCommandsFromDb()
+
+      this.defaultCommands = defaultCommands.value
+      this.customCommands = customCommands.value
     }
     // disconnect from the socket (i.e. when user navigates away from chat page)
     killSocket() {
@@ -349,9 +360,9 @@ export const useStreamChat = () => {
       let thisCommand = message.parameters.trim().split(' ');
       let commandKey = thisCommand[0].substring(1).toLowerCase();
       let args = thisCommand.slice(1)
-      let allCommands = [...this.defaultCommands.value, ...this.customCommands.value]
+      let allCommands = [...this.defaultCommands, ...this.customCommands]
       
-      // find the matching command from the available commands
+      // // find the matching command from the available commands
       const foundCommand = allCommands.find(obj => obj.triggers.includes(commandKey));
 
       if (foundCommand) {
