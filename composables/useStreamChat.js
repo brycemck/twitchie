@@ -1,6 +1,7 @@
 import { storeToRefs } from "pinia";
 import { useStreamApi } from "../composables/useStreamApi";
 import { useStreamStore } from "../stores/stream";
+import { usePreferencesStore } from "../stores/preferences";
 import { ref } from "vue";
 
 export const useStreamChat = () => {
@@ -11,6 +12,8 @@ export const useStreamChat = () => {
       this.broadcasterAccessToken = broadcasterAccessToken;
       this.defaultCommands = defaultCommands;
       this.customCommands = customCommands;
+      this.preferencesStore = usePreferencesStore();
+      this.preferences = {};
     }
     // parseMessage, parseTags, parseCommand, parseSource and parseParameters came from twitch's documentation
     // for an example message parser, with a couple small changes here and there
@@ -278,7 +281,7 @@ export const useStreamChat = () => {
         this.twitchSocket.send(`CAP REQ :twitch.tv/commands twitch.tv/tags`)
         this.twitchSocket.send(`NICK ${this.joiner}`)
         this.twitchSocket.send(`JOIN #${this.broadcaster}`)
-
+        this.initPreferences()
         
         this.twitchSocket.addEventListener('message', (event) => {
           let parsedMessage = this.parseMessage(event.data)
@@ -299,6 +302,12 @@ export const useStreamChat = () => {
         this.streamStore.profile_image_url = data.data[0].profile_image_url
       })
     }
+    // assign preferences using the store
+    initPreferences() {
+      const { commandPrefix, highlightResponses } = storeToRefs(this.preferencesStore)
+      this.preferences.commandPrefix = commandPrefix;
+      this.preferences.highlightResponses = highlightResponses;
+    }
     // disconnect from the socket (i.e. when user navigates away from chat page)
     killSocket() {
       this.twitchSocket.close()
@@ -318,9 +327,9 @@ export const useStreamChat = () => {
       switch (message.command.command) {
         case 'PRIVMSG': // new message sent to chat
           // console.log(`${message.tags['display-name']}: ${message.parameters}`)
-          if (message.parameters.startsWith('!')) { // the message was a command message
+          if (message.parameters.startsWith(this.preferences.commandPrefix.value)) { // the message was a command message
             // console.log('a command was sent')
-            this.handleCommand(message, true);
+            this.handleCommand(message);
           } else {
             this.handleChatMessage(message);
           }
@@ -336,7 +345,7 @@ export const useStreamChat = () => {
       }
     }
     // handle a command message
-    handleCommand(message, highlightResponses) {
+    handleCommand(message) {
       let thisCommand = message.parameters.trim().split(' ');
       let commandKey = thisCommand[0].substring(1).toLowerCase();
       let args = thisCommand.slice(1)
@@ -354,7 +363,7 @@ export const useStreamChat = () => {
           commandResponse = this.injectInjectables(commandResponse, this.injectables, args)
         }
         // respond with the complete command response
-        if (highlightResponses == true) {
+        if (this.preferences.highlightResponses.value == true) {
           this.sendChat(`/me ${commandResponse}`)
         } else {
           this.sendChat(commandResponse)

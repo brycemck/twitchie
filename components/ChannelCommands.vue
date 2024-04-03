@@ -1,5 +1,6 @@
 <script setup>
 import { useNuxtApp } from "nuxt/app";
+import { usePreferencesStore } from "../stores/preferences";
 
 const chatDefaultCommands = ref([])
 const chatInjectables = ref([])
@@ -10,23 +11,28 @@ chatDefaultCommands.value = nuxtApp.$Chat.defaultCommands.value
 chatCustomCommands.value = nuxtApp.$Chat.customCommands.value
 chatInjectables.value = nuxtApp.$Chat.injectables
 
+const preferencesStore = usePreferencesStore();
+preferencesStore.loadPreferencesFromDb();
+const { commandPrefix, highlightResponses } = storeToRefs(preferencesStore)
+
 onMounted(() => {
   // const chatMessages = streamChat.value.displayedChatMessages
 })
 
 </script>
 <template>
-  <!-- <v-row>
+  <v-row>
     <v-col>
       <v-card variant="elevated" title="Preferences">
         <v-card-text>
-          <v-text-field label="Command Prefix" :model-value="commandPrefix" @update:modelValue="commandPrefixUpdate"></v-text-field>
+          <v-text-field label="Command Prefix" :model-value="commandPrefix"></v-text-field>
+          <v-checkbox label="Highlight Responses" :model-value="highlightResponses"></v-checkbox>
         </v-card-text>
       </v-card>
     </v-col>
   </v-row>
   <v-row>
-    <v-col>
+    <!-- <v-col>
       <v-card variant="elevated" title="Arguments">
         <v-card-text>
           You can reference command parameters, using #{x}. (x being the index of the parameter, starting at 0)<br><br>
@@ -35,7 +41,6 @@ onMounted(() => {
         </v-card-text>
       </v-card>
     </v-col> -->
-  <v-row>
     <v-col>
       <v-card variant="elevated" title="Injectables">
         <v-card-text>
