@@ -1,14 +1,16 @@
 import { collection, getDoc, getDocs, doc, updateDoc } from "firebase/firestore";
 
 export const usePreferencesStore = defineStore('preferencesStore', {
-  state: () => ({
+  state: () => ({ // all preferences and defaults go here
     commandPrefix: {
       label: 'Command Prefix',
-      value: '!'
+      value: '!',
+      hint: 'This is the trigger character that will tell the bot to listen for a command'
     },
     highlightResponses: {
       label: 'Highlight bot responses',
-      value: true
+      value: true,
+      hint: 'Prepend /me to all bot responses'
     }
   }),
   actions: {
@@ -38,6 +40,8 @@ export const usePreferencesStore = defineStore('preferencesStore', {
       await updateDoc(docRef, {
         [preference]: value
       })
+      this[preference].value = value
     }
-  }
+  },
+  persist: true
 })

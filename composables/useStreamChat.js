@@ -327,7 +327,7 @@ export const useStreamChat = () => {
       switch (message.command.command) {
         case 'PRIVMSG': // new message sent to chat
           // console.log(`${message.tags['display-name']}: ${message.parameters}`)
-          if (message.parameters.startsWith(this.preferences.commandPrefix.value)) { // the message was a command message
+          if (message.parameters.startsWith(this.preferences.commandPrefix.value.value)) { // the message was a command message
             // console.log('a command was sent')
             this.handleCommand(message);
           } else {
@@ -363,7 +363,7 @@ export const useStreamChat = () => {
           commandResponse = this.injectInjectables(commandResponse, this.injectables, args)
         }
         // respond with the complete command response
-        if (this.preferences.highlightResponses.value == true) {
+        if (this.preferences.highlightResponses.value.value == true) {
           this.sendChat(`/me ${commandResponse}`)
         } else {
           this.sendChat(commandResponse)

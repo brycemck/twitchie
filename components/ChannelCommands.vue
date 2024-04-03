@@ -15,7 +15,6 @@ chatInjectables.value = nuxtApp.$Chat.injectables
 
 onMounted(() => {
   preferencesStore.loadPreferencesFromDb()
-  // const chatMessages = streamChat.value.displayedChatMessages
 })
 
 const preferenceUpdated = (e) => {
@@ -38,8 +37,9 @@ const preferenceUpdated = (e) => {
           <!-- <v-text-field label="Command Prefix" :model-value="commandPrefix" @change="(event) => {preferenceUpdated(event)}"></v-text-field>
           <v-checkbox label="Highlight Responses" :model-value="highlightResponses"></v-checkbox> -->
           <div v-for="(value, key, i) in preferences">
-            <v-text-field v-if="typeof(value.value.value) == 'string'" :label="value.value.label" :model-value="value.value.value" :name="key" @change="preferenceUpdated"></v-text-field>
-            <v-checkbox v-if="typeof(value.value.value) == 'boolean'" :label="value.value.label" :model-value="value.value.value" :name="key" @change="preferenceUpdated"></v-checkbox>
+            <v-text-field v-if="typeof(value.value.value) == 'string'" :label="value.value.label" :model-value="value.value.value" :name="key" @change="preferenceUpdated" :hint="value.value.hint" persistent-hint></v-text-field>
+            <v-checkbox v-if="typeof(value.value.value) == 'boolean'" :label="value.value.label" :model-value="value.value.value" :name="key" @change="preferenceUpdated" :hint="value.value.hint" persistent-hint></v-checkbox>
+            <v-divider style="margin-top:12px;"></v-divider>
           </div>
         </v-card-text>
       </v-card>
@@ -92,3 +92,9 @@ const preferenceUpdated = (e) => {
     </v-col>
   </v-row>
 </template>
+
+<style scoped>
+.v-checkbox .v-input__details {
+    padding-inline: 16px;
+}
+</style>
